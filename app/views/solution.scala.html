@@ -1,11 +1,11 @@
 @(sourceCode: String, hints: List[String], siteCode:String,
-problemId:String) @main("one solution") {
+problemId:String) @main(siteCode + " - " + problemId + " - " + "Accepted Solution") {
 <script
 	src="https://google-code-prettify.googlecode.com/svn/loader/run_prettify.js?skin=desert"></script>
 
 <h4>PROBLEM INFORMATION</h4>
 <ul>
-	<li><a href="http://www.spoj.com/problems/@problemId">Problem statement</a></li>
+	<li><a href="http://www.spoj.com/problems/@problemId">Problem statement: @siteCode - @problemId</a></li>
 </ul>
 
 <h4>ATTENTION</h4>
@@ -29,5 +29,5 @@ problemId:String) @main("one solution") {
 	For simplicity and to use the common algorithms, this solution is using
 	psjava library (<a href="http://psjava.org">http://psjava.org</a>)
 </p>
-<button type="button" class="btn btn-default">Copy to clipboard</button>
+@*<button type="button" class="btn btn-default">Copy to clipboard</button>*@
 }
