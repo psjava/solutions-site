@@ -35,6 +35,8 @@ public class SolutionsSiteController extends Controller {
 		return Promise.promise(new Function0<Result>() {
 			@Override
 			public Result apply() throws Throwable {
+				
+				// damn play.. cant read the file after dist!
 				final File zipFile = Play.getFile("public/solutions-master.zip", Play.current());
 				String content;
 
