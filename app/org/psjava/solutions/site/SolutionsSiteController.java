@@ -36,8 +36,7 @@ public class SolutionsSiteController extends Controller {
 			@Override
 			public Result apply() throws Throwable {
 				
-				// damn play.. cant read the file after dist!
-				final File zipFile = Play.getFile("public/solutions-master.zip", Play.current());
+				final File zipFile = Play.getFile("file-resources/solutions-master.zip", Play.current());
 				String content;
 
 				ZipFile z = new ZipFile(zipFile);
