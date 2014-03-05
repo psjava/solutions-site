@@ -1,6 +1,6 @@
 name := "solutions-site"
 
-version := "1.2-SNAPSHOT"
+version := "1.2"
 
 libraryDependencies ++= Seq(
   javaJdbc,
