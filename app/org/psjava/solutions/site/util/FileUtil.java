@@ -1,4 +1,4 @@
-package org.psjava.solutions.site;
+package org.psjava.solutions.site.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
