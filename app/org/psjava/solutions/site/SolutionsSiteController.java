@@ -56,8 +56,15 @@ public class SolutionsSiteController extends Controller {
 						while (scan.hasNextLine()) {
 							String line = scan.nextLine();
 							if (line.contains("@title")) {
-								String titleInDoc = line.substring(line.indexOf("@title") + 6).trim();
-								String adjusted = titleInDoc.replace(' ', '-').toLowerCase();
+								String titleInDoc = line.substring(line.indexOf("@title") + "@title".length()).trim();
+								String adjusted = "";
+								for (int i = 0; i < titleInDoc.length(); i++) {
+									char c = titleInDoc.charAt(i);
+									if (Character.isAlphabetic(c))
+										adjusted += Character.toLowerCase(c);
+									else if (c == ' ')
+										adjusted += '-';
+								}
 								if (adjusted.equals(title))
 									matchTitle.set(true);
 							}
