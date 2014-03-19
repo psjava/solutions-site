@@ -1,81 +1,91 @@
 package org.psjava.solutions.site;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Scanner;
 
-import org.psjava.solutions.site.util.ZipUtil;
+import org.json.JSONArray;
+import org.psjava.ds.array.DynamicArray;
+import org.psjava.solutions.site.util.HttpUtil;
+import org.psjava.solutions.site.util.Util;
 import org.psjava.util.DataKeeper;
+import org.psjava.util.EventListener;
+import org.psjava.util.Java1DArray;
+import org.psjava.util.Pair;
+import org.psjava.util.ZeroTo;
 
-import play.api.Play;
-import play.cache.Cached;
 import play.libs.F.Function;
 import play.libs.F.Function0;
 import play.libs.F.Promise;
+import play.libs.WS.Response;
 import play.mvc.Controller;
 import play.mvc.Result;
 import views.html.*;
 
 import japa.parser.JavaParser;
+import japa.parser.ParseException;
 import japa.parser.ast.CompilationUnit;
 import japa.parser.ast.body.ClassOrInterfaceDeclaration;
-import japa.parser.ast.body.JavadocComment;
 import japa.parser.ast.visitor.VoidVisitorAdapter;
 
 public class SolutionsSiteController extends Controller {
 
-	@Cached(key = "index")
-	public static Result index() {
-		return ok(index.render());
+	private static final String LISTING_URL = "https://api.github.com/repos/psjava/solutions/contents/src/main/java/org/psjava/solutions/code";
+
+	public static Promise<Result> index() {
+		return HttpUtil.createCacheableUrlFetchPromise(LISTING_URL, new HashMap<String, String>()).map(new Function<Response, List<String>>() {
+			public List<String> apply(Response res) throws Throwable {
+				JSONArray array = new JSONArray(res.getBody());
+				ArrayList<String> dirNames = new ArrayList<String>();
+				for (int i : ZeroTo.get(array.length())) {
+					String dirName = array.getJSONObject(i).getString("name");
+					if (dirName.contains("_")) // TODO after migration finish, remove this condition
+						dirNames.add(dirName);
+				}
+				return dirNames;
+			};
+		}).flatMap(new Function<List<String>, Promise<Result>>() {
+			@Override
+			public Promise<Result> apply(final List<String> dirNames) throws Throwable {
+				Promise<Response>[] promises = Java1DArray.create(Promise.class, dirNames.size());
+				for (int i : ZeroTo.get(promises.length))
+					promises[i] = HttpUtil.createCacheableUrlFetchPromise(constructRawContentUrl(dirNames.get(i)), new HashMap<String, String>());
+				return Promise.sequence(promises).map(new Function<List<Response>, Result>() {
+					@Override
+					public Result apply(List<Response> resList) throws Throwable {
+						DynamicArray<Pair<Pair<String, String>, Pair<String, String>>> r = DynamicArray.create();
+						for (int i : ZeroTo.get(dirNames.size())) {
+							String[] tokens = dirNames.get(i).split("_");
+							String siteCode = tokens[0];
+							String problemId = tokens[1].toUpperCase();
+							Response res = resList.get(i);
+							if (res.getStatus() != 200)
+								return notFound("invalid problem (" + dirNames.get(i));
+							String title = extractTitleInJavaDoc(parse(res.getBody()));
+							r.addToLast(Pair.create(Pair.create(siteCode, problemId), Pair.create(title, convertToTitleDir(title))));
+						}
+						return ok(index.render(Util.toList(r)));
+					}
+				});
+			}
+		});
 	}
 
 	public static Promise<Result> showSolution(final String siteName, final String problemId, final String title) {
-		if (containsUpper(siteName) || containsUpper(title))
+		if (containsUpper(siteName) || containsUpper(title) || containsLower(problemId))
 			return createNotFoundPromise();
-		final File zipFile = Play.getFile("file-resources/solutions-master.zip", Play.current());
-		final String path = "solutions-master/src/main/java/org/psjava/solutions/code/" + siteName + "_" + problemId.toLowerCase() + "/" + "Main.java";
-		return Promise.promise(new Function0<String>() {
+		return HttpUtil.createCacheableUrlFetchPromise(constructRawContentUrl(siteName, problemId), new HashMap<String, String>()).map(new Function<Response, Result>() {
 			@Override
-			public String apply() throws Throwable {
-				return ZipUtil.loadUTF8StringInZipFileOrNull(zipFile, path);
-			}
-		}).map(new Function<String, Result>() {
-			@Override
-			public Result apply(String contentOrNull) throws Throwable {
-				if (contentOrNull == null)
+			public Result apply(Response res) throws Throwable {
+				if (res.getStatus() != 200)
 					return notFound("unknown problem");
-				CompilationUnit cu = JavaParser.parse(new ByteArrayInputStream(contentOrNull.getBytes("UTF-8")), "UTF-8");
-				final DataKeeper<Boolean> matchTitle = DataKeeper.create(false);
-				final ArrayList<String> hints = new ArrayList<String>();
-				new VoidVisitorAdapter<Object>() {
-					@Override
-					public void visit(ClassOrInterfaceDeclaration n, Object arg) {
-						JavadocComment doc = n.getJavaDoc();
-						Scanner scan = new Scanner(doc.getContent());
-						while (scan.hasNextLine()) {
-							String line = scan.nextLine();
-							if (line.contains("@title")) {
-								String titleInDoc = line.substring(line.indexOf("@title") + "@title".length()).trim();
-								String adjusted = "";
-								for (int i = 0; i < titleInDoc.length(); i++) {
-									char c = titleInDoc.charAt(i);
-									if (Character.isAlphabetic(c))
-										adjusted += Character.toLowerCase(c);
-									else if (c == ' ')
-										adjusted += '-';
-								}
-								if (adjusted.equals(title))
-									matchTitle.set(true);
-							}
-							if (line.contains("@hint"))
-								hints.add(line.substring(line.indexOf("@hint") + 5).trim());
-						}
-						scan.close();
-					}
-				}.visit(cu, null);
-				if (matchTitle.get())
-					return ok(solution.render(contentOrNull, hints, siteName, problemId));
+				String content = res.getBody();
+				CompilationUnit cu = parse(content);
+				if (convertToTitleDir(extractTitleInJavaDoc(cu)).equals(title))
+					return ok(solution.render(content, extractHintsFromJavaDoc(cu), siteName, problemId));
 				else
 					return notFound("unknown problem");
 			}
@@ -86,6 +96,18 @@ public class SolutionsSiteController extends Controller {
 		return !text.toLowerCase().equals(text);
 	}
 
+	private static boolean containsLower(String text) {
+		return !text.toUpperCase().equals(text);
+	}
+
+	private static String constructRawContentUrl(final String siteCode, final String problemId) {
+		return constructRawContentUrl(siteCode + "_" + problemId.toLowerCase());
+	}
+
+	private static String constructRawContentUrl(String dirName) {
+		return "https://raw.github.com/psjava/solutions/master/src/main/java/org/psjava/solutions/code/" + dirName + "/Main.java";
+	}
+
 	private static Promise<Result> createNotFoundPromise() {
 		return Promise.promise(new Function0<Result>() {
 			@Override
@@ -94,4 +116,59 @@ public class SolutionsSiteController extends Controller {
 			}
 		});
 	}
+
+	private static CompilationUnit parse(String content) throws ParseException, UnsupportedEncodingException {
+		return JavaParser.parse(new ByteArrayInputStream(content.getBytes("UTF-8")), "UTF-8");
+	}
+
+	private static String convertToTitleDir(String title) {
+		String r = "";
+		for (int i = 0; i < title.length(); i++) {
+			char c = title.charAt(i);
+			if (Character.isAlphabetic(c))
+				r += Character.toLowerCase(c);
+			else if (c == ' ')
+				r += '-';
+		}
+		return r;
+	}
+
+	private static String extractTitleInJavaDoc(CompilationUnit cu) {
+		final DataKeeper<String> r = DataKeeper.create("");
+		visit(cu, new EventListener<String>() {
+			@Override
+			public void visit(String line) {
+				String token = "@title";
+				if (line.contains(token))
+					r.set(line.substring(line.indexOf(token) + token.length()).trim());
+			}
+		});
+		return r.get();
+	}
+
+	private static List<String> extractHintsFromJavaDoc(CompilationUnit cu) {
+		final ArrayList<String> r = new ArrayList<String>();
+		visit(cu, new EventListener<String>() {
+			@Override
+			public void visit(String line) {
+				String token = "@hint";
+				if (line.contains(token))
+					r.add(line.substring(line.indexOf(token) + token.length()).trim());
+			}
+		});
+		return r;
+	}
+
+	private static void visit(CompilationUnit cu, final EventListener<String> lineVisitor) {
+		new VoidVisitorAdapter<Object>() {
+			@Override
+			public void visit(ClassOrInterfaceDeclaration n, Object arg) {
+				Scanner scan = new Scanner(n.getJavaDoc().getContent());
+				while (scan.hasNextLine())
+					lineVisitor.visit(scan.nextLine());
+				scan.close();
+			}
+		}.visit(cu, null);
+	}
+
 }

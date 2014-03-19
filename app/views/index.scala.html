@@ -1,6 +1,9 @@
+@(list: List[org.psjava.util.Pair[org.psjava.util.Pair[String,String], org.psjava.util.Pair[String,String]]]) 
 @main("Accepted Solution") {
 <h4>SOLUTIONS</h4>
 <ul>
-	<li><a href="spoj/PRIME1/prime-generator/solution">SPOJ - PRIME1</a></li>
+	@for(item <- list) {
+		<li><a href="@item.v1.v1/@item.v1.v2/@item.v2.v2/solution">@item.v1.v1 - @item.v1.v2 - @item.v2.v1</a></li>
+	}
 </ul>
 }
