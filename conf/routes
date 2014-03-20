@@ -1,3 +1,4 @@
 GET     /                           org.psjava.solutions.site.SolutionsSiteController.index()
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
 GET /:siteCode/:problemId/:title org.psjava.solutions.site.SolutionsSiteController.showSolution(siteCode:String, problemId:String, title:String)
+GET /clear-cache org.psjava.solutions.site.SolutionsSiteController.clearCache()

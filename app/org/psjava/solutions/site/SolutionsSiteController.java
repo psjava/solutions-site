@@ -92,6 +92,10 @@ public class SolutionsSiteController extends Controller {
 		});
 	}
 
+	public static Result clearCache() {
+		return redirect("/");
+	}
+
 	private static boolean containsUpper(String text) {
 		return !text.toLowerCase().equals(text);
 	}
