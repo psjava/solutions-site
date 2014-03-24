@@ -93,6 +93,7 @@ public class SolutionsSiteController extends Controller {
 	}
 
 	public static Result clearCache() {
+		HttpUtil.clearCached();
 		return redirect("/");
 	}
 
