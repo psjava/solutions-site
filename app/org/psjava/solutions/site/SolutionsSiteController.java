@@ -58,14 +58,19 @@ public class SolutionsSiteController extends Controller {
 					public Result apply(List<Response> resList) throws Throwable {
 						DynamicArray<Pair<Pair<String, String>, Pair<String, String>>> r = DynamicArray.create();
 						for (int i : ZeroTo.get(dirNames.size())) {
-							String[] tokens = dirNames.get(i).split("_");
-							String siteCode = tokens[0];
-							String problemId = tokens[1].toUpperCase();
+							String dirName = dirNames.get(i);
+							int indexOrN1 = dirName.indexOf('_');
+							if (indexOrN1 == -1)
+								continue;
+							String siteCode = dirName.substring(0, indexOrN1);
+							String problemId = dirName.substring(indexOrN1 + 1).replace('_', '-');
 							Response res = resList.get(i);
 							if (res.getStatus() != 200)
-								return notFound("invalid problem (" + dirNames.get(i));
+								return notFound("invalid problem (" + dirName + ")");
 							String title = extractTitleInJavaDoc(parse(res.getBody()));
-							r.addToLast(Pair.create(Pair.create(siteCode, problemId), Pair.create(title, convertToTitleDir(title))));
+							String urlDir = convertToUrlDir(title);
+							String description = constructDescription(siteCode, problemId, title);
+							r.addToLast(Pair.create(Pair.create(siteCode, problemId), Pair.create(description, urlDir)));
 						}
 						return ok(index.render(Util.toList(r)));
 					}
@@ -74,18 +79,19 @@ public class SolutionsSiteController extends Controller {
 		});
 	}
 
-	public static Promise<Result> showSolution(final String siteName, final String problemId, final String title) {
-		if (containsUpper(siteName) || containsUpper(title) || containsLower(problemId))
+	public static Promise<Result> showSolution(final String siteCode, final String problemId, final String titleInUrlDirFormat) {
+		if (containsUpper(siteCode) || containsUpper(titleInUrlDirFormat) || containsUpper(problemId))
 			return createNotFoundPromise();
-		return HttpUtil.createCacheableUrlFetchPromise(constructRawContentUrl(siteName, problemId), new HashMap<String, String>()).map(new Function<Response, Result>() {
+		return HttpUtil.createCacheableUrlFetchPromise(constructRawContentUrl(siteCode, problemId), new HashMap<String, String>()).map(new Function<Response, Result>() {
 			@Override
 			public Result apply(Response res) throws Throwable {
 				if (res.getStatus() != 200)
 					return notFound("unknown problem");
 				String content = res.getBody();
 				CompilationUnit cu = parse(content);
-				if (convertToTitleDir(extractTitleInJavaDoc(cu)).equals(title))
-					return ok(solution.render(content, extractHintsFromJavaDoc(cu), siteName, problemId));
+				String title = extractTitleInJavaDoc(cu);
+				if (convertToUrlDir(title).equals(titleInUrlDirFormat))
+					return ok(solution.render(content, extractHintsFromJavaDoc(cu), siteCode, constructDescription(siteCode, problemId, title)));
 				else
 					return notFound("unknown problem");
 			}
@@ -101,16 +107,12 @@ public class SolutionsSiteController extends Controller {
 		return !text.toLowerCase().equals(text);
 	}
 
-	private static boolean containsLower(String text) {
-		return !text.toUpperCase().equals(text);
-	}
-
 	private static String constructRawContentUrl(final String siteCode, final String problemId) {
-		return constructRawContentUrl(siteCode + "_" + problemId.toLowerCase());
+		return constructRawContentUrl(siteCode + "_" + problemId.replace('-', '_'));
 	}
 
-	private static String constructRawContentUrl(String dirName) {
-		return "https://raw.github.com/psjava/solutions/master/src/main/java/org/psjava/solutions/code/" + dirName + "/Main.java";
+	private static String constructRawContentUrl(String problemDirName) {
+		return "https://raw.github.com/psjava/solutions/master/src/main/java/org/psjava/solutions/code/" + problemDirName + "/Main.java";
 	}
 
 	private static Promise<Result> createNotFoundPromise() {
@@ -126,11 +128,11 @@ public class SolutionsSiteController extends Controller {
 		return JavaParser.parse(new ByteArrayInputStream(content.getBytes("UTF-8")), "UTF-8");
 	}
 
-	private static String convertToTitleDir(String title) {
+	private static String convertToUrlDir(String title) {
 		String r = "";
 		for (int i = 0; i < title.length(); i++) {
 			char c = title.charAt(i);
-			if (Character.isAlphabetic(c))
+			if (Character.isLowerCase(c) || Character.isUpperCase(c))
 				r += Character.toLowerCase(c);
 			else if (c == ' ')
 				r += '-';
@@ -176,4 +178,28 @@ public class SolutionsSiteController extends Controller {
 		}.visit(cu, null);
 	}
 
+	private static String constructDescription(String siteCode, String problemId, String title) {
+		String description;
+		if (siteCode.equals("spoj"))
+			description = "SPOJ" + " " + problemId.toUpperCase() + " - " + title;
+		else if (siteCode.equals("codejam"))
+			description = "Code Jam" + " " + getUrlDirResolved(problemId) + " - " + title;
+		else
+			throw new RuntimeException();
+		return description;
+	}
+
+	private static String getUrlDirResolved(String problemId) {
+		String r = "";
+		for (int i = 0; i < problemId.length(); i++) {
+			char c = problemId.charAt(i);
+			if (c == '-')
+				r += ' ';
+			else if (i > 0 && problemId.charAt(i - 1) == '-')
+				r += Character.toUpperCase(c);
+			else
+				r += c;
+		}
+		return r;
+	}
 }
