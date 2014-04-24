@@ -187,6 +187,8 @@ public class SolutionsSiteController extends Controller {
 			description = "SPOJ" + " " + problemId.toUpperCase() + " - " + title;
 		else if (siteCode.equals("codejam"))
 			description = "Code Jam" + " " + getUrlDirResolved(problemId) + " - " + title;
+		else if (siteCode.equals("lightoj"))
+			description = "LightOJ" + " " + getUrlDirResolved(problemId) + " - " + title;
 		else
 			throw new RuntimeException();
 		return description;
