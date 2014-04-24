@@ -33,10 +33,13 @@ import japa.parser.ast.visitor.VoidVisitorAdapter;
 
 public class SolutionsSiteController extends Controller {
 
+	private static final String TARGET_REF = "v1";
 	private static final String LISTING_URL = "https://api.github.com/repos/psjava/solutions/contents/src/main/java/org/psjava/solutions/code";
 
 	public static Promise<Result> index() {
-		return HttpUtil.createCacheableUrlFetchPromise(LISTING_URL, new HashMap<String, String>()).map(new Function<Response, List<String>>() {
+		HashMap<String, String> param = new HashMap<String, String>();
+		param.put("ref", TARGET_REF);
+		return HttpUtil.createCacheableUrlFetchPromise(LISTING_URL, param).map(new Function<Response, List<String>>() {
 			public List<String> apply(Response res) throws Throwable {
 				JSONArray array = new JSONArray(res.getBody());
 				ArrayList<String> dirNames = new ArrayList<String>();
@@ -112,7 +115,7 @@ public class SolutionsSiteController extends Controller {
 	}
 
 	private static String constructRawContentUrl(String problemDirName) {
-		return "https://raw.github.com/psjava/solutions/master/src/main/java/org/psjava/solutions/code/" + problemDirName + "/Main.java";
+		return "https://raw.github.com/psjava/solutions/" + TARGET_REF + "/src/main/java/org/psjava/solutions/code/" + problemDirName + "/Main.java";
 	}
 
 	private static Promise<Result> createNotFoundPromise() {
