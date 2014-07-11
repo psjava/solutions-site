@@ -33,7 +33,7 @@ import japa.parser.ast.visitor.VoidVisitorAdapter;
 
 public class SolutionsSiteController extends Controller {
 
-	private static final String TARGET_REF = "v2";
+	private static final String TARGET_REF = "v3";
 	private static final String LISTING_URL = "https://api.github.com/repos/psjava/solutions/contents/src/main/java/org/psjava/solutions/code";
 
 	public static Promise<Result> index() {
@@ -189,6 +189,8 @@ public class SolutionsSiteController extends Controller {
 			description = "Code Jam" + " " + getUrlDirResolved(problemId) + " - " + title;
 		else if (siteCode.equals("lightoj"))
 			description = "LightOJ" + " " + getUrlDirResolved(problemId) + " - " + title;
+		else if (siteCode.equals("tju"))
+			description = "TJU" + " " + getUrlDirResolved(problemId) + " - " + title;
 		else
 			throw new RuntimeException();
 		return description;
