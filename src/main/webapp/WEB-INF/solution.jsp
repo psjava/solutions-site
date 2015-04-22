@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@taglib prefix="t" tagdir="/WEB-INF/tags" %>
 <%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
 <t:frame title="${description} - Hint and Solution">
     <link rel="stylesheet" media="screen" href='/stylesheets/prettify-skin-desert-trunk.css'>
     <script src='/prettify-small-4-Mar-2013/google-code-prettify/prettify.js'></script>
@@ -23,7 +24,7 @@
     </ul>
 
     <h4>SOURCE CODE</h4>
-    <pre class="small prettyprint lang-java small-tab">${sourceCode}</pre>
+    <pre class="small prettyprint lang-java small-tab">${fn:escapeXml(sourceCode)}</pre>
     <p>
         For simplicity and to use the common algorithms, this solution is using
         psjava library (<a href="http://psjava.org">http://psjava.org</a>)
