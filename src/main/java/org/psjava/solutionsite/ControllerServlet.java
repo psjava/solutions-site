@@ -152,14 +152,18 @@ public class ControllerServlet extends HttpServlet {
 		String description;
 		if (siteCode.equals("spoj"))
 			description = "SPOJ" + " " + problemId.toUpperCase() + " - " + title;
+		else if (siteCode.equals("hackercup"))
+			description = "Hacker Cup" + " " + getUrlDirResolved(problemId) + " - " + title;
 		else if (siteCode.equals("codejam"))
 			description = "Code Jam" + " " + getUrlDirResolved(problemId) + " - " + title;
 		else if (siteCode.equals("lightoj"))
 			description = "LightOJ" + " " + getUrlDirResolved(problemId) + " - " + title;
 		else if (siteCode.equals("tju"))
 			description = "TJU" + " " + getUrlDirResolved(problemId) + " - " + title;
+		else if (siteCode.equals("poj"))
+			description = "POJ" + " " + getUrlDirResolved(problemId) + " - " + title;
 		else
-			throw new RuntimeException();
+			throw new RuntimeException(siteCode);
 		return description;
 	}
 
