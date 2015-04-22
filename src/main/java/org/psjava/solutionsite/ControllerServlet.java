@@ -23,7 +23,7 @@ import java.util.Scanner;
 
 public class ControllerServlet extends HttpServlet {
 
-	private static final String TARGET_REF = "v3";
+	private static final String TARGET_REF = "v4";
 	private static final String LISTING_URL = "https://api.github.com/repos/psjava/solutions/contents/src/main/java/org/psjava/solutions/code";
 
 	@Override
